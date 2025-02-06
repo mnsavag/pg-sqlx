@@ -37,19 +37,39 @@ func (r *SqliteRepository) AddDeck(ctx context.Context, deck *Deck) (uuid.UUID, 
 }
 
 func (r *SqliteRepository) DeleteDeck(ctx context.Context, id uuid.UUID) error {
-	query := fmt.Sprintf("DELETE FROM %s dt WHERE dt.id=:1", decksTable)
-	_, err := r.db.Exec(query, id.String())
+	query := fmt.Sprintf("DELETE FROM %s WHERE id=:1", decksTable)
+	_, err := r.db.ExecContext(ctx, query, id.String())
 
 	return err
 }
 
 func (r *SqliteRepository) GetDeckById(ctx context.Context, id uuid.UUID) (Deck, error) {
-	var deck Deck
+	type DeckTable struct {
+		Id          uuid.UUID
+		Topic       *string
+		Description *string
+		Links       []byte
+	}
+	var deckTable DeckTable
 
 	query := fmt.Sprintf(`SELECT dt.id, dt.topic, dt.description, dt.links FROM %s dt WHERE dt.id = :1`, decksTable)
-	err := r.db.Get(&deck, query, id.String())
+	err := r.db.Get(&deckTable, query, id.String())
+	if err != nil {
+		return Deck{}, errors.Errorf("cant get deck: %s", err.Error())
+	}
 
-	return deck, err
+	var links []string
+	err = json.Unmarshal(deckTable.Links, &links)
+	if err != nil {
+		return Deck{}, errors.Errorf("cant get deck: %s", err.Error())
+	}
+
+	return Deck{
+		Id:          deckTable.Id,
+		Topic:       deckTable.Topic,
+		Description: deckTable.Description,
+		Links:       links,
+	}, err
 }
 
 func (r *SqliteRepository) UpdateDeck(ctx context.Context, id uuid.UUID, fieldsUpdate UpdateDeckData) error {
@@ -70,14 +90,19 @@ func (r *SqliteRepository) UpdateDeck(ctx context.Context, id uuid.UUID, fieldsU
 	}
 
 	if fieldsUpdate.Links != nil {
+		links, err := json.Marshal(fieldsUpdate.Links)
+		if err != nil {
+			return errors.Errorf("cant create deck: %s", err.Error())
+		}
+
 		setValues = append(setValues, fmt.Sprintf("links=:%d", argId))
-		args = append(args, fieldsUpdate.Links)
+		args = append(args, links)
 		argId++
 	}
 
 	setQuery := strings.Join(setValues, ", ")
 
-	query := fmt.Sprintf("UPDATE %s dt SET %s WHERE dt.id=:%d",
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE id=:%d",
 		decksTable, setQuery, argId)
 	args = append(args, id.String())
 
