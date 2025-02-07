@@ -28,7 +28,7 @@ func (r *SqliteRepository) AddDeck(ctx context.Context, deck *Deck) (uuid.UUID, 
 		return uuid.Nil, errors.Errorf("cant create deck: %s", err.Error())
 	}
 
-	_, err = r.db.Exec(query, args...)
+	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return uuid.Nil, errors.Errorf("cant create deck: %s", err.Error())
 	}
@@ -79,13 +79,13 @@ func (r *SqliteRepository) UpdateDeck(ctx context.Context, id uuid.UUID, fieldsU
 
 	if fieldsUpdate.Topic != nil {
 		setValues = append(setValues, fmt.Sprintf("topic=:%d", argId))
-		args = append(args, *fieldsUpdate.Topic)
+		args = append(args, &fieldsUpdate.Topic)
 		argId++
 	}
 
 	if fieldsUpdate.Description != nil {
 		setValues = append(setValues, fmt.Sprintf("description=:%d", argId))
-		args = append(args, *fieldsUpdate.Description)
+		args = append(args, &fieldsUpdate.Description)
 		argId++
 	}
 
@@ -106,6 +106,6 @@ func (r *SqliteRepository) UpdateDeck(ctx context.Context, id uuid.UUID, fieldsU
 		decksTable, setQuery, argId)
 	args = append(args, id.String())
 
-	_, err := r.db.Exec(query, args...)
+	_, err := r.db.ExecContext(ctx, query, args...)
 	return err
 }

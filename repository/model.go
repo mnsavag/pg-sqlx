@@ -19,3 +19,9 @@ type UpdateCardData struct {
 	Question *string
 	Answer   *string
 }
+
+type Card struct {
+	Id       uuid.UUID
+	Question *string
+	Answer   *string
+}

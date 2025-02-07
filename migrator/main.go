@@ -36,6 +36,8 @@ func main() {
 		panic(err)
 	}
 
+	//m.Down()
+
 	if err := m.Up(); err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
 			fmt.Println("no migrations to apply")
